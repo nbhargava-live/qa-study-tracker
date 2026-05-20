@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nikita's QA Study Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181d;
+    --surface2: #1e2028;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e9ed;
+    --muted: #6b7280;
+    --accent: #4ade80;
+    --accent-dim: rgba(74,222,128,0.12);
+    --accent-border: rgba(74,222,128,0.3);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.1);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.1);
+    --coral: #f87171;
+    --purple: #a78bfa;
+    --teal: #2dd4bf;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Sora', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo svg { width: 18px; height: 18px; stroke: #0e0f11; fill: none; stroke-width: 2.5; }
+  .header-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .header-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .reset-btn {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    background: none; border: 1px solid var(--border2); border-radius: 6px;
+    padding: 5px 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .reset-btn:hover { color: var(--coral); border-color: var(--coral); }
+
+  /* Progress bar */
+  .progress-strip {
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+  }
+  .progress-label { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .progress-pct { font-size: 22px; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+  .progress-track {
+    height: 4px; background: var(--border2); border-radius: 4px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 4px; background: var(--accent); border-radius: 4px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .stat-row {
+    display: flex; gap: 24px; margin-top: 12px;
+  }
+  .stat { display: flex; align-items: center; gap: 6px; }
+  .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .stat-text { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .stat-num { font-weight: 500; color: var(--text); }
+
+  /* Layout */
+  .main { display: flex; min-height: calc(100vh - 120px); }
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    position: sticky;
+    top: 120px;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10px; font-family: var(--mono); color: var(--muted);
+    padding: 0 16px 8px; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 16px; cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+  .sidebar-item:hover { background: var(--surface); }
+  .sidebar-item.active { border-left-color: var(--accent); background: var(--surface); }
+  .sidebar-pip {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid var(--muted);
+  }
+  .sidebar-pip.done { background: var(--accent); border-color: var(--accent); }
+  .sidebar-pip.partial { background: var(--amber); border-color: var(--amber); }
+  .sidebar-text { font-size: 12px; color: var(--muted); flex: 1; }
+  .sidebar-item.active .sidebar-text { color: var(--text); }
+  .sidebar-pct { font-size: 10px; font-family: var(--mono); color: var(--muted); }
+
+  /* Content */
+  .content { flex: 1; padding: 28px 32px; max-width: 860px; }
+
+  /* Phase */
+  .phase { margin-bottom: 40px; scroll-margin-top: 140px; }
+  .phase-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .phase-badge {
+    font-family: var(--mono); font-size: 10px; font-weight: 500;
+    padding: 3px 8px; border-radius: 4px; border: 1px solid;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .phase-title { font-size: 16px; font-weight: 600; flex: 1; }
+  .phase-weeks { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .phase-bar-wrap { height: 3px; background: var(--border2); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .phase-bar-fill { height: 3px; border-radius: 3px; transition: width 0.4s; }
+
+  /* Section */
+  .section { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .sec-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; cursor: pointer; background: var(--surface);
+    transition: background 0.15s; user-select: none;
+  }
+  .sec-header:hover { background: var(--surface2); }
+  .sec-check {
+    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+    border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; background: transparent;
+  }
+  .sec-check.done { background: var(--accent); border-color: var(--accent); }
+  .sec-check svg { width: 10px; height: 10px; stroke: #0e0f11; fill: none; stroke-width: 3; display: none; }
+  .sec-check.done svg { display: block; }
+  .sec-badge {
+    font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 4px;
+    border: 1px solid; flex-shrink: 0;
+  }
+  .sec-title { flex: 1; font-size: 13px; font-weight: 500; }
+  .sec-meta { display: flex; align-items: center; gap: 8px; }
+  .sec-prog { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .sec-chev { width: 16px; height: 16px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+  .sec-chev.open { transform: rotate(180deg); }
+
+  .sec-body { display: none; border-top: 1px solid var(--border); }
+  .sec-body.open { display: block; }
+
+  /* Items */
+  .item { border-bottom: 1px solid var(--border); }
+  .item:last-of-type.no-notes { border-bottom: none; }
+  .item-header {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 16px; cursor: pointer; transition: background 0.12s;
+  }
+  .item-header:hover { background: var(--surface2); }
+  .item-check {
+    width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+    border: 1.5px solid var(--border2); margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .item-check.done { background: var(--accent); border-color: var(--accent); }
+  .item-check svg { width: 8px; height: 8px; stroke: #0e0f11; fill: none; stroke-width: 3; display: none; }
+  .item-check.done svg { display: block; }
+  .item-label { flex: 1; font-size: 13px; color: var(--text); line-height: 1.5; }
+  .item-label.done { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(107,114,128,0.5); }
+  .item-chev { width: 14px; height: 14px; color: var(--muted); transition: transform 0.2s; margin-top: 3px; flex-shrink: 0; }
+  .item-chev.open { transform: rotate(180deg); }
+
+  .item-detail { display: none; padding: 10px 16px 14px 40px; background: var(--bg); }
+  .item-detail.open { display: block; }
+
+  .subtasks { margin-bottom: 10px; }
+  .sub {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin-bottom: 6px; cursor: pointer; padding: 2px 0;
+  }
+  .sub-check {
+    width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; margin-top: 3px;
+    border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center;
+  }
+  .sub-check.done { background: var(--accent); border-color: var(--accent); }
+  .sub-check svg { width: 7px; height: 7px; stroke: #0e0f11; fill: none; stroke-width: 3; display: none; }
+  .sub-check.done svg { display: block; }
+  .sub-label { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .sub-label.done { text-decoration: line-through; text-decoration-color: rgba(107,114,128,0.4); }
+
+  .courses { margin-top: 8px; }
+  .courses-label {
+    font-size: 10px; font-family: var(--mono); color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px;
+  }
+  .course-link {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--blue); text-decoration: none; margin-bottom: 3px;
+  }
+  .course-link:hover { text-decoration: underline; }
+  .course-link svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+  /* Notes section */
+  .notes-section {
+    border-top: 1px solid var(--border);
+    padding: 14px 16px;
+    background: var(--bg);
+  }
+  .notes-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .notes-label { font-size: 11px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .notes-saved { font-size: 10px; font-family: var(--mono); color: var(--accent); opacity: 0; transition: opacity 0.3s; }
+  .notes-saved.show { opacity: 1; }
+  .notes-textarea {
+    width: 100%; min-height: 80px; resize: vertical;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 8px 12px; font-family: var(--mono);
+    font-size: 12px; color: var(--text); line-height: 1.6;
+    outline: none; transition: border-color 0.15s;
+  }
+  .notes-textarea:focus { border-color: var(--accent-border); }
+  .notes-textarea::placeholder { color: var(--muted); }
+
+  /* Milestone tag */
+  .milestone {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-family: var(--mono);
+    background: rgba(251,191,36,0.1); color: var(--amber);
+    border: 1px solid rgba(251,191,36,0.25); border-radius: 4px;
+    padding: 2px 8px; margin-top: 6px;
+  }
+  .milestone svg { width: 10px; height: 10px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .header { padding: 14px 16px; }
+    .progress-strip { padding: 12px 16px; }
+    .content { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo">
+      <svg viewBox="0 0 18 18"><polyline points="4,9 7,12 14,6"/></svg>
+    </div>
+    <div>
+      <div class="header-title">QA Study Tracker</div>
+      <div class="header-sub">Nikita Bhargava — 12-week plan</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="reset-btn" onclick="confirmReset()">Reset all</button>
+  </div>
+</header>
+
+<div class="progress-strip">
+  <div class="progress-meta">
+    <span class="progress-label">Overall progress — <span id="done-count">0</span> of <span id="total-count">0</span> skills</span>
+    <span class="progress-pct" id="prog-pct">0%</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-dot" style="background:#4ade80"></div><span class="stat-text"><span class="stat-num" id="sub-done">0</span> subtasks done</span></div>
+    <div class="stat"><div class="stat-dot" style="background:#60a5fa"></div><span class="stat-text"><span class="stat-num" id="hours-done">0</span>h of ~150h video</span></div>
+    <div class="stat"><div class="stat-dot" style="background:#fbbf24"></div><span class="stat-text">Progress auto-saved</span></div>
+  </div>
+</div>
+
+<div class="main">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+const PHASES = [
+  {
+    id:"p1", label:"Phase 1", title:"Core foundation", weeks:"Weeks 1–3",
+    color:"#60a5fa", colorDim:"rgba(96,165,250,0.12)", hours:30,
+    milestone: null,
+    sections:[
+      {
+        id:"python-basics", badge:"Python", badgeColor:"#60a5fa",
+        title:"Python basics",
+        items:[
+          {id:"py-syntax", label:"Core Python syntax",
+           tasks:["Variables, data types, type casting","Strings — slicing, formatting, f-strings","Lists, tuples, sets, dicts","Comprehensions (list, dict)","Lambda, map, filter"],
+           courses:[{n:"100 Days of Code – Dr Angela Yu (57h)",u:"https://www.udemy.com/course/100-days-of-code/"},{n:"Automate the Boring Stuff – Al Sweigart",u:"https://www.udemy.com/course/automate/"}]},
+          {id:"py-oop", label:"Functions & OOP",
+           tasks:["Defining functions, *args, **kwargs","Classes, objects, self, __init__","Inheritance and method overriding","Decorators basics"],
+           courses:[{n:"100 Days of Code – Dr Angela Yu",u:"https://www.udemy.com/course/100-days-of-code/"}]},
+          {id:"py-env", label:"File handling & environment setup",
+           tasks:["Read/write files (txt, csv, json)","os and pathlib modules","python-dotenv — manage env vars","Virtual environments (venv)","Exception handling — try/except/finally","logging module — levels and formatters"],
+           courses:[{n:"Python Bootcamp – Jose Portilla (22h)",u:"https://www.udemy.com/course/complete-python-bootcamp/"}]}
+        ]
+      },
+      {
+        id:"pytest", badge:"pytest", badgeColor:"#a78bfa",
+        title:"pytest — test framework",
+        items:[
+          {id:"pytest-core", label:"pytest core concepts",
+           tasks:["Test discovery rules (test_*.py)","assert statements — all forms","Running tests: -v, -k, -m flags","pytest.ini / pyproject.toml config"],
+           courses:[{n:"Python for Automation Testing – Rahul Shetty (~15h)",u:"https://www.udemy.com/course/python-for-automation-testing/"}]},
+          {id:"pytest-fixtures", label:"Fixtures & conftest",
+           tasks:["@pytest.fixture — writing and using","Scope: function, class, module, session","conftest.py — shared fixtures","yield fixtures for teardown","Fixture parameterisation"],
+           courses:[{n:"Python for Automation Testing – Rahul Shetty",u:"https://www.udemy.com/course/python-for-automation-testing/"}]},
+          {id:"pytest-markers", label:"Markers & parameterisation",
+           tasks:["@pytest.mark.parametrize — single and multi-param","Custom markers and registration","@pytest.mark.skip, skipif, xfail","Running subsets: pytest -m smoke"],
+           courses:[{n:"Python for Automation Testing – Rahul Shetty",u:"https://www.udemy.com/course/python-for-automation-testing/"}]},
+          {id:"pytest-report", label:"Reporting",
+           tasks:["pytest-html — install and generate report","Allure-pytest — steps, severity, screenshots","JUnit XML output for CI pipelines"],
+           courses:[{n:"Selenium WebDriver with Python – Rahul Shetty (18h)",u:"https://www.udemy.com/course/selenium-real-time-exams-and-interviews/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p2", label:"Phase 2", title:"Selenium WebDriver", weeks:"Weeks 3–5",
+    color:"#4ade80", colorDim:"rgba(74,222,128,0.1)", hours:30,
+    milestone:"GitHub repo with working POM framework by end of Week 5",
+    sections:[
+      {
+        id:"selenium", badge:"Selenium", badgeColor:"#4ade80",
+        title:"Selenium WebDriver — full stack",
+        items:[
+          {id:"sel-setup", label:"Setup & browser control",
+           tasks:["Selenium 4 install, webdriver-manager","Launch Chrome/Firefox, navigate, quit","Browser options — headless, window size","Implicit vs explicit waits","WebDriverWait + ExpectedConditions"],
+           courses:[{n:"Selenium WebDriver with Python – Rahul Shetty (18h)",u:"https://www.udemy.com/course/selenium-real-time-exams-and-interviews/"},{n:"Selenium Python Basics to Advanced – Rahul Shetty (~12h)",u:"https://www.udemy.com/course/selenium-python-framework-basics-to-advance/"}]},
+          {id:"sel-locators", label:"Element location strategies",
+           tasks:["By.ID, NAME, CLASS_NAME, TAG_NAME","By.XPATH — absolute vs relative","By.CSS_SELECTOR — class, attribute, pseudo","find_elements (list) vs find_element","Chaining locators for robustness"],
+           courses:[{n:"Selenium WebDriver with Python – Rahul Shetty",u:"https://www.udemy.com/course/selenium-real-time-exams-and-interviews/"}]},
+          {id:"sel-actions", label:"Interactions & advanced actions",
+           tasks:["click, send_keys, clear, submit","ActionChains — hover, drag-drop, right-click","Select class — dropdowns","Handling alerts, confirms, prompts","iFrame switching (switch_to.frame)","Multiple windows/tabs (switch_to.window)","JavaScript executor — scroll, click, get value"],
+           courses:[{n:"Selenium WebDriver with Python – Rahul Shetty",u:"https://www.udemy.com/course/selenium-real-time-exams-and-interviews/"}]},
+          {id:"sel-pom", label:"Page Object Model (POM)",
+           tasks:["BasePage class with shared driver methods","Separate page class per screen","Locator constants file","POM wired into pytest fixtures","Screenshot on test failure (autouse fixture)"],
+           courses:[{n:"Selenium Python Basics to Advanced – Rahul Shetty",u:"https://www.udemy.com/course/selenium-python-framework-basics-to-advance/"}]},
+          {id:"sel-parallel", label:"Cross-browser & parallel execution",
+           tasks:["Parameterise browser in conftest","pytest-xdist for parallel runs","Selenium Grid concept (hub + node)","Headless execution in CI"],
+           courses:[{n:"Selenium WebDriver with Python – Rahul Shetty",u:"https://www.udemy.com/course/selenium-real-time-exams-and-interviews/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p3", label:"Phase 3", title:"REST API testing", weeks:"Weeks 5–7",
+    color:"#fbbf24", colorDim:"rgba(251,191,36,0.1)", hours:30,
+    milestone:"API test repo on GitHub with pytest + HTML report",
+    sections:[
+      {
+        id:"api", badge:"API", badgeColor:"#fbbf24",
+        title:"REST API testing — full stack",
+        items:[
+          {id:"api-http", label:"HTTP & REST fundamentals",
+           tasks:["HTTP methods: GET POST PUT PATCH DELETE","Status codes — 2xx 4xx 5xx meanings","Headers: Content-Type, Authorization, Accept","Request body formats: JSON, form-data","Auth types: Basic, Bearer token, API key, OAuth2"],
+           courses:[{n:"Postman: The Complete Guide – Valentin Despa (14h)",u:"https://www.udemy.com/course/postman-the-complete-guide/"}]},
+          {id:"api-postman", label:"Postman & Newman",
+           tasks:["Create collections, folders, requests","Pre-request scripts — set env variables","Test scripts: pm.test(), pm.expect()","Environments and global variables","Newman CLI: run collections from terminal","Newman HTML reporter"],
+           courses:[{n:"Postman: The Complete Guide – Valentin Despa",u:"https://www.udemy.com/course/postman-the-complete-guide/"}]},
+          {id:"api-requests", label:"Python requests library",
+           tasks:["GET, POST, PUT, DELETE with requests","Pass headers, params, JSON body","Parse response.json(), status_code","Session object for token persistence","Assert responses inside pytest","Read credentials from env vars"],
+           courses:[{n:"REST API Testing with Python – Rahul Shetty (~10h)",u:"https://www.udemy.com/course/api-testing-python/"}]},
+          {id:"api-design", label:"API test design",
+           tasks:["Positive and negative test cases","Schema validation (jsonschema library)","Chained API calls (auth → resource → cleanup)","Data-driven API tests with parametrize"],
+           courses:[{n:"REST API Testing with Python – Rahul Shetty",u:"https://www.udemy.com/course/api-testing-python/"}]},
+          {id:"api-fastapi", label:"FastAPI test harnesses",
+           tasks:["FastAPI overview — routes, request/response","Writing stub/mock endpoints","TestClient for integration tests","Mocking with unittest.mock and responses library"],
+           courses:[{n:"FastAPI – The Complete Course (~6h)",u:"https://www.udemy.com/course/fastapi-the-complete-course/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p4", label:"Phase 4", title:"CI/CD & DevOps", weeks:"Weeks 7–8",
+    color:"#f87171", colorDim:"rgba(248,113,113,0.1)", hours:40,
+    milestone:"Existing GitHub repos auto-run on every push",
+    sections:[
+      {
+        id:"git", badge:"Git", badgeColor:"#6b7280",
+        title:"Git & GitHub",
+        items:[
+          {id:"git-core", label:"Git essentials",
+           tasks:["git init, clone, add, commit, push, pull","Branching: checkout -b, merge, rebase",".gitignore for Python projects","Pull requests and code review flow","Tagging releases","Resolving merge conflicts"],
+           courses:[{n:"Git & GitHub Bootcamp – Colt Steele (17h)",u:"https://www.udemy.com/course/git-and-github-bootcamp/"}]}
+        ]
+      },
+      {
+        id:"azuredevops", badge:"Azure DevOps", badgeColor:"#60a5fa",
+        title:"Azure DevOps pipelines",
+        items:[
+          {id:"azdo-pipeline", label:"Azure DevOps pipeline setup",
+           tasks:["Azure DevOps overview — boards, repos, pipelines","Create YAML pipeline (azure-pipelines.yml)","Trigger on push and PR","Install dependencies (pip) in pipeline","Run pytest and publish test results","Pipeline variables and secret variables","Publish HTML artifact from pipeline"],
+           courses:[{n:"Azure DevOps for Beginners – Alan Rodrigues (~8h)",u:"https://www.udemy.com/course/azure-devops-for-beginners/"},{n:"Azure DevOps: The Complete Guide",u:"https://www.udemy.com/course/azure-devops-the-complete-guide/"}]}
+        ]
+      },
+      {
+        id:"jenkins", badge:"Jenkins", badgeColor:"#a78bfa",
+        title:"Jenkins",
+        items:[
+          {id:"jenkins-core", label:"Jenkins basics",
+           tasks:["Install Jenkins locally via Docker","Freestyle vs Pipeline jobs","Jenkinsfile — declarative syntax","Trigger builds: poll SCM, webhook","Post-build: publish HTML report","Jenkins + GitHub integration"],
+           courses:[{n:"Jenkins from Zero to Hero (10.5h)",u:"https://www.udemy.com/course/jenkins-from-zero-to-hero/"}]}
+        ]
+      },
+      {
+        id:"docker", badge:"Docker", badgeColor:"#2dd4bf",
+        title:"Docker basics",
+        items:[
+          {id:"docker-core", label:"Docker for QA",
+           tasks:["Container vs VM concept","docker run, docker ps, docker stop","Dockerfile — build a test runner image","docker-compose for multi-service test envs","Run pytest inside a container","Mount volumes for test reports"],
+           courses:[{n:"Docker for Absolute Beginners – Mumshad (4h)",u:"https://www.udemy.com/course/learn-docker/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p5", label:"Phase 5", title:"SQL, Snowflake & DBs", weeks:"Weeks 9–10",
+    color:"#4ade80", colorDim:"rgba(74,222,128,0.08)", hours:20,
+    milestone: null,
+    sections:[
+      {
+        id:"sql", badge:"SQL", badgeColor:"#4ade80",
+        title:"SQL fundamentals & intermediate",
+        items:[
+          {id:"sql-basics", label:"SQL basics",
+           tasks:["SELECT, WHERE, ORDER BY, LIMIT","AND/OR/NOT, BETWEEN, IN, LIKE","NULL handling: IS NULL, COALESCE","String functions: CONCAT, UPPER, TRIM","Date functions: NOW(), DATEDIFF, DATE_FORMAT"],
+           courses:[{n:"The Complete SQL Bootcamp – Jose Portilla (9h)",u:"https://www.udemy.com/course/the-complete-sql-bootcamp/"}]},
+          {id:"sql-intermediate", label:"Intermediate SQL",
+           tasks:["INNER, LEFT, RIGHT, FULL OUTER JOIN","GROUP BY + HAVING","Subqueries and correlated subqueries","CTEs (WITH clause)","Window functions: ROW_NUMBER, RANK, LAG, LEAD","UNION vs UNION ALL"],
+           courses:[{n:"The Complete SQL Bootcamp – Jose Portilla",u:"https://www.udemy.com/course/the-complete-sql-bootcamp/"}]},
+          {id:"sql-qa", label:"SQL for QA & data validation",
+           tasks:["Write queries to verify data after API calls","Check transactional integrity across tables","Validate audit trail data (created_at, updated_at)","Cleanup test data with DELETE/UPDATE","SQLite with Python (sqlite3 module)","Connect to PostgreSQL/MySQL from Python"],
+           courses:[{n:"Python for Automation Testing – Rahul Shetty",u:"https://www.udemy.com/course/python-for-automation-testing/"}]}
+        ]
+      },
+      {
+        id:"snowflake", badge:"Snowflake", badgeColor:"#60a5fa",
+        title:"Snowflake",
+        items:[
+          {id:"snowflake-core", label:"Snowflake for QA",
+           tasks:["Architecture — warehouses, databases, schemas","Connect with Python (snowflake-connector-python)","Run queries from Python scripts","Validate Snowflake tables in test assertions","Time travel concept (theory)"],
+           courses:[{n:"Snowflake Masterclass – Nikolai Schuler (~10h)",u:"https://www.udemy.com/course/snowflake-masterclass/"}]}
+        ]
+      },
+      {
+        id:"mongodb", badge:"MongoDB", badgeColor:"#fbbf24",
+        title:"MongoDB basics",
+        items:[
+          {id:"mongo-core", label:"MongoDB for QA",
+           tasks:["Document model — collections, documents, BSON","CRUD with PyMongo: find, insert_one, update_one, delete_one","Query filters — $eq, $in, $gt, $lt","Validate MongoDB state in test assertions"],
+           courses:[{n:"MongoDB Complete Guide – Maximilian Schwarzmuller (~17h)",u:"https://www.udemy.com/course/mongodb-the-complete-developers-guide/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p6", label:"Phase 6", title:"Tools, leadership & domain", weeks:"Weeks 10–11",
+    color:"#f87171", colorDim:"rgba(248,113,113,0.08)", hours:20,
+    milestone: null,
+    sections:[
+      {
+        id:"tools", badge:"Tools", badgeColor:"#6b7280",
+        title:"Test management tools",
+        items:[
+          {id:"jira", label:"Jira for QA leads",
+           tasks:["Defect lifecycle: New → Open → In Progress → Resolved → Closed","Jira filters and dashboards","Linking bugs to stories and test cases","Sprint planning and velocity tracking"],
+           courses:[{n:"Jira for Beginners",u:"https://www.udemy.com/course/the-complete-guide-to-jira-with-real-world-examples/"}]},
+          {id:"alm", label:"HP ALM & qTest",
+           tasks:["Test plan and test set structure","Creating and executing test cases","Defect traceability matrix","Uploading automated results","Test coverage reporting"],
+           courses:[{n:"HP ALM Quality Center Basics",u:"https://www.udemy.com/course/hp-alm/"}]},
+          {id:"confluence", label:"Confluence",
+           tasks:["Writing test plans in Confluence","QA wiki pages — runbooks, process docs","Framework onboarding guide documentation"],
+           courses:[{n:"Confluence for Beginners",u:"https://www.udemy.com/course/confluence-tutorial/"}]}
+        ]
+      },
+      {
+        id:"leadership", badge:"Leadership", badgeColor:"#f87171",
+        title:"QA leadership & Agile",
+        items:[
+          {id:"agile", label:"Agile & Scrum for QA leads",
+           tasks:["Scrum ceremonies: planning, standup, review, retro","QA role in sprint: grooming, estimation, sign-off","Definition of Done — quality gates","Risk-based testing strategy"],
+           courses:[{n:"Agile Scrum for Beginners – Vibhor Chandna",u:"https://www.udemy.com/course/agile-scrum-for-beginners-and-scrum-master-certification/"}]},
+          {id:"test-planning", label:"Test planning & strategy",
+           tasks:["Writing a test plan (scope, approach, risk, resources)","Test estimation techniques","Requirements Traceability Matrix (RTM)","Entry and exit criteria","Go/no-go release readiness report"],
+           courses:[{n:"ISTQB Foundation Level – Quality Gurus",u:"https://www.udemy.com/course/istqb-foundation-level-certification/"},{n:"Software Testing Masterclass – Nicholas Kreidberg",u:"https://www.udemy.com/course/testerbootcamp/"}]},
+          {id:"defect-rca", label:"Defect triage & RCA",
+           tasks:["Severity vs priority matrix","RCA techniques: 5 Whys, Fishbone","Production log analysis — reading stack traces","MTTR and MTTD concepts","Writing clear defect reports"],
+           courses:[{n:"Software Testing Masterclass – Nicholas Kreidberg",u:"https://www.udemy.com/course/testerbootcamp/"}]},
+          {id:"reporting", label:"Stakeholder reporting",
+           tasks:["QA dashboard: defect trends, coverage, pass/fail rate","Executive summary — what to include","Release readiness communication","Knowledge transfer session structure"],
+           courses:[{n:"Business Communication – Chris Haroun",u:"https://www.udemy.com/course/business-communication-how-to-be-a-great-communicator/"}]}
+        ]
+      },
+      {
+        id:"domain-ai", badge:"Domain: AI", badgeColor:"#a78bfa",
+        title:"Domain — Conversational AI",
+        items:[
+          {id:"ai-testing", label:"Conversational AI testing concepts",
+           tasks:["Intents, entities, dialog flows","Multi-turn conversations and context","Testing intent classification accuracy","Slot filling and fallback handling","Non-deterministic output testing strategies"],
+           courses:[{n:"Building AI Apps with OpenAI APIs – Colt Steele",u:"https://www.udemy.com/course/openai-api-chatgpt-gpt4-with-python/"}]}
+        ]
+      },
+      {
+        id:"domain-iga", badge:"Domain: IGA", badgeColor:"#fbbf24",
+        title:"Domain — Identity governance & ERP",
+        items:[
+          {id:"iga-core", label:"IGA & ERP concepts",
+           tasks:["RBAC fundamentals","Identity lifecycle: joiner/mover/leaver","Segregation of Duties (SoD)","Access provisioning and deprovisioning flows","SailPoint IGA architecture overview","SAP module overview for QA context"],
+           courses:[{n:"Cybersecurity & IAM Fundamentals",u:"https://www.udemy.com/course/identity-and-access-management/"},{n:"SAP Overview for Beginners",u:"https://www.udemy.com/course/sap-overview/"}]}
+        ]
+      },
+      {
+        id:"domain-telecom", badge:"Domain: Telecom", badgeColor:"#2dd4bf",
+        title:"Domain — Telecom systems",
+        items:[
+          {id:"telecom-core", label:"Telecom fundamentals for QA",
+           tasks:["Order management lifecycle: create → provision → activate","BSS/OSS overview","E-Repair and field service flows","UAT in telecom — business sign-off process"],
+           courses:[{n:"Telecom Fundamentals for Non-Technical Professionals",u:"https://www.udemy.com/course/telecom-fundamentals/"}]}
+        ]
+      }
+    ]
+  },
+  {
+    id:"p7", label:"Phase 7", title:"Performance, accessibility & messaging", weeks:"Week 12",
+    color:"#6b7280", colorDim:"rgba(107,114,128,0.08)", hours:20,
+    milestone: null,
+    sections:[
+      {
+        id:"perf", badge:"Performance", badgeColor:"#fbbf24",
+        title:"Performance testing & Grafana",
+        items:[
+          {id:"jmeter", label:"Performance testing — JMeter",
+           tasks:["Load vs stress vs spike vs soak testing","Key metrics: response time, throughput, error rate","JMeter basics — thread groups, samplers, listeners","Creating and running a load test plan"],
+           courses:[{n:"Performance Testing using JMeter (~9h)",u:"https://www.udemy.com/course/performance-testing-using-jmeter/"}]},
+          {id:"grafana", label:"Grafana for monitoring",
+           tasks:["Read and interpret Grafana dashboards","Panels: time series, stat, gauge, table","Connect Grafana to a data source (concept)","Use Grafana during load tests to observe metrics"],
+           courses:[{n:"Grafana for Beginners – Abhishek Veramalla",u:"https://www.udemy.com/course/grafana-tutorial/"}]}
+        ]
+      },
+      {
+        id:"accessibility", badge:"Accessibility", badgeColor:"#60a5fa",
+        title:"Accessibility — WCAG 2.0/2.1",
+        items:[
+          {id:"wcag", label:"WCAG testing",
+           tasks:["WCAG principles: Perceivable, Operable, Understandable, Robust","A vs AA vs AAA conformance levels","Manual checks: keyboard nav, focus order, colour contrast","Automated tools: axe-core, Lighthouse, WAVE","Selenium + axe integration (axe-selenium-python)"],
+           courses:[{n:"Web Accessibility & WCAG 2.1 (~5h)",u:"https://www.udemy.com/course/web-accessibility-wcag-21/"}]}
+        ]
+      },
+      {
+        id:"messaging", badge:"Messaging", badgeColor:"#a78bfa",
+        title:"Async messaging",
+        items:[
+          {id:"servicebus", label:"Azure Service Bus",
+           tasks:["Queues vs Topics vs Subscriptions","Connect with Python (azure-servicebus)","Send and receive messages in tests","Dead-letter queue concept","Test event-driven flows: trigger → validate message"],
+           courses:[{n:"AZ-900 Azure Fundamentals – Scott Duffy",u:"https://www.udemy.com/course/az900-azure/"}]},
+          {id:"mqtt", label:"MQTT basics",
+           tasks:["Pub/sub model — broker, topic, QoS levels","Install and run Mosquitto broker locally","Python paho-mqtt: subscribe, publish","Write a test that publishes and asserts message received"],
+           courses:[{n:"MQTT Absolute Beginners Guide (~3h)",u:"https://www.udemy.com/course/mqtt-the-beginning/"}]}
+        ]
+      }
+    ]
+  }
+];
+
+// Storage helpers
+const STORE = 'qa_tracker_v2';
+let state = {};
+
+function loadState() {
+  try { state = JSON.parse(localStorage.getItem(STORE)) || {}; } catch(e) { state = {}; }
+}
+function saveState() {
+  localStorage.setItem(STORE, JSON.stringify(state));
+}
+function getKey(type, id) { return type + ':' + id; }
+function isChecked(type, id) { return !!state[getKey(type, id)]; }
+function toggle(type, id) {
+  const k = getKey(type, id);
+  state[k] = !state[k];
+  saveState();
+}
+function getNote(secId) { return state['note:' + secId] || ''; }
+function setNote(secId, val) { state['note:' + secId] = val; saveState(); }
+
+// SVG helpers
+const checkSVG = '<svg viewBox="0 0 10 10"><polyline points="2,5 4,7.5 8,2.5"/></svg>';
+const chevSVG = (cls) => `<svg class="sec-chev ${cls}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,6 8,10 12,6"/></svg>`;
+
+// Count helpers
+function countItems() {
+  let total = 0, done = 0, subTotal = 0, subDone = 0;
+  PHASES.forEach(p => p.sections.forEach(s => s.items.forEach(item => {
+    total++;
+    if(isChecked('item', item.id)) done++;
+    item.tasks.forEach((_, ti) => {
+      subTotal++;
+      if(isChecked('sub', item.id + '_' + ti)) subDone++;
+    });
+  })));
+  return {total, done, subTotal, subDone};
+}
+
+function phaseCounts(phase) {
+  let total = 0, done = 0;
+  phase.sections.forEach(s => s.items.forEach(item => {
+    total++; if(isChecked('item', item.id)) done++;
+  }));
+  return {total, done};
+}
+
+function secCounts(sec) {
+  let total = sec.items.length, done = 0;
+  sec.items.forEach(item => { if(isChecked('item', item.id)) done++; });
+  return {total, done};
+}
+
+// Update global progress
+function updateProgress() {
+  const {total, done, subDone} = countItems();
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('done-count').textContent = done;
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('sub-done').textContent = subDone;
+  // rough hours estimate
+  const hoursPerSkill = 150 / total;
+  document.getElementById('hours-done').textContent = Math.round(done * hoursPerSkill);
+  updateSidebar();
+}
+
+// Sidebar update
+function updateSidebar() {
+  PHASES.forEach(p => {
+    const {total, done} = phaseCounts(p);
+    const pct = total ? Math.round(done/total*100) : 0;
+    const pip = document.getElementById('pip_'+p.id);
+    const pctEl = document.getElementById('spct_'+p.id);
+    if(pip) {
+      pip.className = 'sidebar-pip' + (done===total&&total>0?' done':done>0?' partial':'');
+    }
+    if(pctEl) pctEl.textContent = pct + '%';
+    // phase bar
+    const bar = document.getElementById('pbar_'+p.id);
+    if(bar) bar.style.width = pct + '%';
+  });
+}
+
+// Render
+function render() {
+  loadState();
+  renderSidebar();
+  renderContent();
+  updateProgress();
+}
+
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '<div class="sidebar-label">Phases</div>';
+  PHASES.forEach(p => {
+    const {total, done} = phaseCounts(p);
+    const pct = total ? Math.round(done/total*100) : 0;
+    const partial = done > 0 && done < total;
+    const a = document.createElement('a');
+    a.className = 'sidebar-item';
+    a.href = '#' + p.id;
+    a.innerHTML = `
+      <div class="sidebar-pip${done===total&&total>0?' done':partial?' partial':''}" id="pip_${p.id}"></div>
+      <span class="sidebar-text">${p.label}: ${p.title}</span>
+      <span class="sidebar-pct" id="spct_${p.id}">${pct}%</span>
+    `;
+    sb.appendChild(a);
+  });
+}
+
+function renderContent() {
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  PHASES.forEach(p => {
+    const {total, done} = phaseCounts(p);
+    const pct = total ? Math.round(done/total*100) : 0;
+    const phaseDiv = document.createElement('div');
+    phaseDiv.className = 'phase';
+    phaseDiv.id = p.id;
+    phaseDiv.innerHTML = `
+      <div class="phase-header">
+        <span class="phase-badge" style="color:${p.color};border-color:${p.color};background:${p.colorDim}">${p.label}</span>
+        <span class="phase-title">${p.title}</span>
+        <span class="phase-weeks">${p.weeks} · ~${p.hours}h video</span>
+      </div>
+      ${p.milestone ? `<div class="milestone"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5" cy="5" r="3.5"/><polyline points="3.5,5 4.5,6 6.5,4"/></svg>${p.milestone}</div>` : ''}
+      <div class="phase-bar-wrap" style="margin-top:${p.milestone?'8px':'4px'}"><div class="phase-bar-fill" id="pbar_${p.id}" style="background:${p.color};width:${pct}%"></div></div>
+    `;
+    p.sections.forEach(sec => {
+      phaseDiv.appendChild(renderSection(sec));
+    });
+    content.appendChild(phaseDiv);
+  });
+}
+
+function renderSection(sec) {
+  const {total, done} = secCounts(sec);
+  const isDone = done === total && total > 0;
+  const wrap = document.createElement('div');
+  wrap.className = 'section';
+  wrap.id = 'sec_' + sec.id;
+
+  const hdr = document.createElement('div');
+  hdr.className = 'sec-header';
+  hdr.innerHTML = `
+    <div class="sec-check${isDone?' done':''}" id="sck_${sec.id}" title="Mark section complete">
+      ${checkSVG}
+    </div>
+    <span class="sec-badge" style="color:${sec.badgeColor};border-color:${sec.badgeColor};background:${sec.badgeColor}18">${sec.badge}</span>
+    <span class="sec-title">${sec.title}</span>
+    <div class="sec-meta">
+      <span class="sec-prog" id="secprog_${sec.id}">${done}/${total}</span>
+      ${chevSVG('')}
+    </div>
+  `;
+
+  // Section check toggle
+  hdr.querySelector('.sec-check').addEventListener('click', e => {
+    e.stopPropagation();
+    const allDone = sec.items.every(item => isChecked('item', item.id));
+    sec.items.forEach(item => {
+      state['item:' + item.id] = !allDone;
+      item.tasks.forEach((_, ti) => { state['sub:' + item.id + '_' + ti] = !allDone; });
+    });
+    saveState();
+    refreshSection(sec);
+    updateProgress();
+  });
+
+  const body = document.createElement('div');
+  body.className = 'sec-body';
+  body.id = 'sbody_' + sec.id;
+
+  sec.items.forEach(item => {
+    body.appendChild(renderItem(item, sec));
+  });
+
+  // Notes
+  const notesDiv = document.createElement('div');
+  notesDiv.className = 'notes-section';
+  const savedNote = getNote(sec.id);
+  notesDiv.innerHTML = `
+    <div class="notes-header">
+      <span class="notes-label">Section notes</span>
+      <span class="notes-saved" id="nsaved_${sec.id}">saved</span>
+    </div>
+    <textarea class="notes-textarea" id="note_${sec.id}" placeholder="Add your notes here — key learnings, commands to remember, things to revisit...">${savedNote}</textarea>
+  `;
+  body.appendChild(notesDiv);
+
+  hdr.addEventListener('click', () => {
+    const open = body.classList.toggle('open');
+    hdr.querySelector('.sec-chev').classList.toggle('open', open);
+  });
+
+  wrap.appendChild(hdr);
+  wrap.appendChild(body);
+
+  // Note save on input
+  setTimeout(() => {
+    const ta = document.getElementById('note_' + sec.id);
+    if(ta) {
+      let timer;
+      ta.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          setNote(sec.id, ta.value);
+          const saved = document.getElementById('nsaved_' + sec.id);
+          if(saved) { saved.classList.add('show'); setTimeout(()=>saved.classList.remove('show'), 1500); }
+        }, 600);
+      });
+    }
+  }, 0);
+
+  return wrap;
+}
+
+function renderItem(item, sec) {
+  const done = isChecked('item', item.id);
+  const itemDiv = document.createElement('div');
+  itemDiv.className = 'item';
+  itemDiv.id = 'item_' + item.id;
+
+  const hdr = document.createElement('div');
+  hdr.className = 'item-header';
+  hdr.innerHTML = `
+    <div class="item-check${done?' done':''}" id="ick_${item.id}">${checkSVG}</div>
+    <span class="item-label${done?' done':''}" id="ilbl_${item.id}">${item.label}</span>
+    <svg class="item-chev" id="ichev_${item.id}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,5 7,9 11,5"/></svg>
+  `;
+
+  hdr.querySelector('.item-check').addEventListener('click', e => {
+    e.stopPropagation();
+    toggle('item', item.id);
+    const nowDone = isChecked('item', item.id);
+    document.getElementById('ick_' + item.id).className = 'item-check' + (nowDone?' done':'');
+    document.getElementById('ilbl_' + item.id).className = 'item-label' + (nowDone?' done':'');
+    refreshSectionHeader(sec);
+    updateProgress();
+  });
+
+  const detail = document.createElement('div');
+  detail.className = 'item-detail';
+  detail.id = 'idet_' + item.id;
+
+  const subDiv = document.createElement('div');
+  subDiv.className = 'subtasks';
+  item.tasks.forEach((task, ti) => {
+    const subDone = isChecked('sub', item.id + '_' + ti);
+    const s = document.createElement('div');
+    s.className = 'sub';
+    s.innerHTML = `
+      <div class="sub-check${subDone?' done':''}" id="sc_${item.id}_${ti}">${checkSVG}</div>
+      <span class="sub-label${subDone?' done':''}" id="sl_${item.id}_${ti}">${task}</span>
+    `;
+    s.addEventListener('click', () => {
+      toggle('sub', item.id + '_' + ti);
+      const nd = isChecked('sub', item.id + '_' + ti);
+      document.getElementById('sc_' + item.id + '_' + ti).className = 'sub-check' + (nd?' done':'');
+      document.getElementById('sl_' + item.id + '_' + ti).className = 'sub-label' + (nd?' done':'');
+      updateProgress();
+    });
+    subDiv.appendChild(s);
+  });
+
+  const coursesDiv = document.createElement('div');
+  coursesDiv.className = 'courses';
+  coursesDiv.innerHTML = `<div class="courses-label">Udemy courses</div>` +
+    item.courses.map(c => `<a class="course-link" href="${c.u}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2H2a1 1 0 00-1 1v6a1 1 0 001 1h6a1 1 0 001-1V7"/><path d="M7 1h3v3"/><line x1="10" y1="1" x2="5" y2="6"/></svg>
+      ${c.n}</a>`).join('');
+
+  detail.appendChild(subDiv);
+  detail.appendChild(coursesDiv);
+
+  hdr.addEventListener('click', () => {
+    const open = detail.classList.toggle('open');
+    document.getElementById('ichev_' + item.id).classList.toggle('open', open);
+  });
+
+  itemDiv.appendChild(hdr);
+  itemDiv.appendChild(detail);
+  return itemDiv;
+}
+
+function refreshSection(sec) {
+  const {total, done} = secCounts(sec);
+  const isDone = done === total && total > 0;
+  const ck = document.getElementById('sck_' + sec.id);
+  if(ck) ck.className = 'sec-check' + (isDone?' done':'');
+  const prog = document.getElementById('secprog_' + sec.id);
+  if(prog) prog.textContent = done + '/' + total;
+  sec.items.forEach(item => {
+    const nd = isChecked('item', item.id);
+    const ick = document.getElementById('ick_' + item.id);
+    const ilbl = document.getElementById('ilbl_' + item.id);
+    if(ick) ick.className = 'item-check' + (nd?' done':'');
+    if(ilbl) ilbl.className = 'item-label' + (nd?' done':'');
+    item.tasks.forEach((_, ti) => {
+      const sd = isChecked('sub', item.id + '_' + ti);
+      const sc = document.getElementById('sc_' + item.id + '_' + ti);
+      const sl = document.getElementById('sl_' + item.id + '_' + ti);
+      if(sc) sc.className = 'sub-check' + (sd?' done':'');
+      if(sl) sl.className = 'sub-label' + (sd?' done':'');
+    });
+  });
+}
+
+function refreshSectionHeader(sec) {
+  const {total, done} = secCounts(sec);
+  const isDone = done === total && total > 0;
+  const ck = document.getElementById('sck_' + sec.id);
+  if(ck) ck.className = 'sec-check' + (isDone?' done':'');
+  const prog = document.getElementById('secprog_' + sec.id);
+  if(prog) prog.textContent = done + '/' + total;
+}
+
+function confirmReset() {
+  if(confirm('Reset all progress and notes? This cannot be undone.')) {
+    localStorage.removeItem(STORE);
+    state = {};
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
